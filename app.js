@@ -6,7 +6,8 @@ const logger = require('morgan');
 
 const indexRouter = require('./routes/index');
 const apartmentsRouter = require('./routes/apartments');
-
+const scrape = require('./controllers/scrape');
+const Poller = require('./controllers/Poller');
 const app = express();
 
 // view engine setup
@@ -37,5 +38,12 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+app.on('listening', () => {
+  console.log('listening');
+});
+
+const poller = new Poller(60 * 60 * 1000, scrape);
+poller.start();
 
 module.exports = app;
