@@ -1,14 +1,18 @@
 const rp = require('request-promise');
 const cheerio = require('cheerio');
+const Datastore = require('@google-cloud/datastore');
+const datastore = new Datastore();
+
 const options = {
   uri: 'https://www.hel.fi/kv/stadinasunnot-fi/hekan-asunnot/hae-asuntoa-heka/vapaat-asunnot/',
   transform: (body) => {
     return cheerio.load(body);
   },
 };
+
 const scrape = () => {
+  const scrapedApartments = [];
   rp(options).then(($) => {
-    const apartments = [];
     const elements = $('div[id^="apartment-"]');
     elements.map((i, e) => {
       const apartment = {};
@@ -38,10 +42,48 @@ const scrape = () => {
           first().
           text();
       apartment.rent = parseFloat(rentStr);
-      apartments.push(apartment);
+      scrapedApartments.push(apartment);
+    });
+
+    const query = datastore.createQuery('Apartment');
+
+    datastore.runQuery(query).then((results) => {
+      const storedEntities = results[0];
+      const storedKeys = storedEntities.map((entity) => {
+        return entity[datastore.KEY].name;
+      });
+
+      const foundDate = new Date();
+
+      const newEntities = [];
+
+      scrapedApartments.map((apartment) => {
+        if (!storedKeys.includes(apartment.id)) {
+          apartment.found = foundDate;
+
+          const key = datastore.key(['Apartment', apartment.id]);
+
+          const entity = {
+            key: key,
+            data: apartment,
+          };
+
+          newEntities.push(entity);
+        }
+      });
+
+      if (newEntities.length < 1) return;
+
+      datastore.upsert(newEntities).then(() => {
+        console.log('Saved ' + newEntities.length + ' new apartments');
+      }).catch((err) => {
+        console.error(err);
+      });
+    }).catch((err) => {
+      console.error(err);
     });
   }).catch((err) => {
-    console.log(err.message);
+    console.error(err.message);
   });
 };
 

@@ -39,10 +39,6 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-app.on('listening', () => {
-  console.log('listening');
-});
-
 const poller = new Poller(60 * 60 * 1000, scrape);
 poller.start();
 

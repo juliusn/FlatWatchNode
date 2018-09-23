@@ -2,7 +2,8 @@ const EventEmitter = require('events');
 
 class Poller extends EventEmitter {
   /**
-   * @param {int} timeout how long should we wait after the poll started?
+   * @param {int} timeout Time between the polls.
+   * @param {function} callBack Function to evoke when polling.
    */
   constructor(timeout = 100, callBack) {
     super();
